@@ -2498,16 +2498,19 @@ sizes.data = 1
 
 local non_array_types = S{'char', 'bit', 'data'}
 
-local function parse(fs, data, index, max)
+local function parse(fs, data, index, max, lookup)
     max = max == '*' and 0 or max or 1
+--    windower.debug('In Max : '..max)
     index = index or 4
 
     local res = L{}
     local count = 0
     local bitoffset = 0
     while index < #data do
+--    windower.debug('Index: '..index..', #data: '..#data);
         count = count + 1
         for field in fs:it() do
+--            windower.debug('field.label: '..(field.label or 'null')..', field.ctype: '..(field.ctype or 'null'))
             if field.ctype then
                 field = table.copy(field)
                 local ctype, count_str = field.ctype:match('(.*)%[(%d+)%]')
@@ -2515,42 +2518,50 @@ local function parse(fs, data, index, max)
                     field.ctype = ctype
                     local ext, size = parse(L{field}, data, index, count_str:number())
                     res = res + ext
-                    index = index + size
+                    index = size -- I haven't tested this, make sure the values are correct
                 else
                     if max ~= 1 then
-                        if field.lookup then
-                            field.label = field.lookup[count].english .. ' ' .. field.label
+                        if lookup and lookup[count-1] then
+                            field.label = lookup[count-1].english .. ' ' .. field.label  -- Note: This is wrong for craft skills
                         else
                             field.label = field.label .. ' ' .. count:string()
                         end
+--                        windower.debug(count..' : '..(field.label or 'null').. ' : '..(data:byte(index+1) or 'null')..' : '..(data:byte(index+2) or 'null'))
                     end
 
                     res:append(field)
                     if ctype == 'bit' or field.ctype == 'boolbit' then
                         local bits = count_str and count_str:number() or 1
-                        bitoffset = (bitoffset + bits) % 8
+--                        windower.debug('Bits in: Index: '..index..',  bitoffset: '..bitoffset..', bits: '..bits)
                         index = index + ((bitoffset + bits) / 8):floor()
+                        bitoffset = (bitoffset + bits) % 8
+--                        windower.debug('Bits out: NewIndex: '..index..',  bitoffset: '..bitoffset)
                     else
-                        index = index + sizes[field.ctype:match('(%a+)[^%a]*$')]
+                        index = index + (count_str * sizes[field.ctype:match('(%a+)[^%a]*$')])
+--                        windower.debug('NewIndex: '..index..', size: '..sizes[field.ctype:match('(%a+)[^%a]*$')])
                     end
                 end
             else
                 local type_count = field.count
                 if not type_count then
-                    local byte_index = field.count_ref + 1
+                    byte_index = field.count_ref + 1
                     type_count = data:byte(byte_index, byte_index)
                 end
-                local ext, size = parse(field.ref, data, index, type_count)
+--                windower.debug('countfield in - count: '..count..', type_count: '..type_count..', byte_index: '..(byte_index or 'null')..', Index: '..index..', #data: '..#data);
+                local ext, size = parse(field.ref, data, index, type_count, field.lookup)
                 res = res + ext
-                index = index + size
+                index = size -- This is intentional, size will be the current index value at this point
+--                windower.debug('countfield out - count: '..count..', Index: '..index..', #data: '..#data);
             end
         end
 
+--        windower.debug('Out 0 - count: '..count..', Index: '..index..', #data: '..#data);
         if count == max then
+--        windower.debug('Out 1 - Index: '..index..', #data: '..#data);
             return res, index
         end
     end
-
+--    windower.debug('Out 2 - Index: '..index..', #data: '..#data);
     return res, index
 end
 
