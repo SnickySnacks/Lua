@@ -2537,7 +2537,7 @@ local function parse(fs, data, index, max, lookup)
                         bitoffset = (bitoffset + bits) % 8
 --                        windower.debug('Bits out: NewIndex: '..index..',  bitoffset: '..bitoffset)
                     else
-                        index = index + (count_str * sizes[field.ctype:match('(%a+)[^%a]*$')])
+                        index = index + ((count_str and count_str:number() or 1) * sizes[field.ctype:match('(%a+)[^%a]*$')])
 --                        windower.debug('NewIndex: '..index..', size: '..sizes[field.ctype:match('(%a+)[^%a]*$')])
                     end
                 end
