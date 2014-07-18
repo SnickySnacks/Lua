@@ -2530,14 +2530,15 @@ local function parse(fs, data, index, max, lookup)
                     end
 
                     res:append(field)
+                    local items = count_str and count_str:number() or 1
                     if ctype == 'bit' or field.ctype == 'boolbit' then
-                        local bits = count_str and count_str:number() or 1
---                        windower.debug('Bits in: Index: '..index..',  bitoffset: '..bitoffset..', bits: '..bits)
-                        index = index + ((bitoffset + bits) / 8):floor()
-                        bitoffset = (bitoffset + bits) % 8
+                        
+--                        windower.debug('Bits in: Index: '..index..',  bitoffset: '..bitoffset..', bits: '..items)
+                        index = index + ((bitoffset + items) / 8):floor()
+                        bitoffset = (bitoffset + items) % 8
 --                        windower.debug('Bits out: NewIndex: '..index..',  bitoffset: '..bitoffset)
                     else
-                        index = index + ((count_str and count_str:number() or 1) * sizes[field.ctype:match('(%a+)[^%a]*$')])
+                        index = index + (items * sizes[field.ctype:match('(%a+)[^%a]*$')])
 --                        windower.debug('NewIndex: '..index..', size: '..sizes[field.ctype:match('(%a+)[^%a]*$')])
                     end
                 end
